@@ -6,11 +6,18 @@ import static com.google.common.base.Preconditions.checkState;
 import com.google.common.base.Strings;
 import com.malexj.model.ComparisonModel;
 import com.malexj.sevice.ComparisonService;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import lombok.extern.log4j.Log4j;
 
+@Log4j
 public class ComparisonServiceImpl implements ComparisonService {
 
   private static final String ERROR_NULL_LIST = "The list of documents should not be null!";
@@ -24,8 +31,21 @@ public class ComparisonServiceImpl implements ComparisonService {
     return documents
         .stream()
         .filter(checkDocumentName())
-        .map(this::mapDocumentName)
+        .map(this::mapComparisonModel)
         .collect(Collectors.toSet());
+  }
+
+  @Override
+  public List<String> getDocumentsFromFolder(String path) throws IOException {
+    List<String> documents;
+    try (Stream<Path> paths = Files.walk(Paths.get(path))) {
+      documents =
+          paths
+              .filter(Files::isRegularFile)
+              .map(file -> file.getFileName().toString())
+              .collect(Collectors.toList());
+    }
+    return documents;
   }
 
   private Predicate<ComparisonModel> checkDocumentName() {
@@ -40,7 +60,7 @@ public class ComparisonServiceImpl implements ComparisonService {
     };
   }
 
-  private ComparisonModel mapDocumentName(ComparisonModel doc) {
+  private ComparisonModel mapComparisonModel(ComparisonModel doc) {
     String firstDocument = doc.getFirstDocument();
     String secondDocument = doc.getSecondDocument();
     if (firstDocument.compareTo(secondDocument) > 0) {
